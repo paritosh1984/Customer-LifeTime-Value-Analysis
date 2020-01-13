@@ -1,0 +1,443 @@
+---
+title: "Customer Lifetime Value Analysis"
+output: html_document
+---
+
+# Importing the dataset
+
+```{r}
+data = read.csv('MCVA.csv')
+```
+
+# Importing the Libraries
+
+```{r}
+library(tidyverse)
+library(ggthemes)
+library(corrplot)
+library(GGally)
+library(DT)
+library(caret)
+```
+
+# Checking for missing values
+
+```{r}
+colnames(data)
+sapply(data , function(x) sum(is.na(x)))
+```
+
+We have considered Customer Lifetime Value (CLV) as our dependent variable (DV) because the more the CLV, more is the profitability for the Auto insurance company. The independent variables are as follows –
+ 
+Dropping Customer ID, State, Response, Effective To Date, Policy, Renew Offer Type
+
+```{r}
+data = data %>% select(-Customer, -State, -Response, -Effective.To.Date, -Policy, -Renew.Offer.Type)
+data
+```
+```{r}
+str(data)
+```
+
+# Descriptive Analysis
+
+```{r}
+ggplot(data , aes(x = data$Coverage , y = data$Customer.Lifetime.Value , fill = Coverage)) + 
+        geom_boxplot() + 
+        theme_igray() + 
+        labs(y = 'Customer Lifetime Value' , x = 'Coverage')
+```
+
+From the above figure we can see that extended coverage is more dispersed as compared to other two.
+
+```{r}
+ggplot(data , aes(x = data$Education , y = data$Customer.Lifetime.Value , fill = Education)) + 
+        geom_boxplot() + 
+        theme_igray() + 
+        labs(y = 'Customer Lifetime Value' , x = 'Education')
+```
+High school or below is more dispersed.
+
+```{r}
+ggplot(data , aes(x = data$EmploymentStatus , y = data$Customer.Lifetime.Value , fill = EmploymentStatus)) + 
+        geom_boxplot() + 
+        theme_igray() + 
+        labs(y = 'Customer Lifetime Value' , x = 'Employment Status')
+```
+Employed is more dispersed.
+
+```{r}
+ggplot(data , aes(x = data$Gender , y = data$Customer.Lifetime.Value , fill = Gender)) + 
+        geom_boxplot() + 
+        theme_igray() + 
+        labs(y = 'Customer Lifetime Value' , x = 'Gender')
+```
+Male CLV is more dispersed as compared to female
+
+```{r}
+ggplot(data , aes(x = data$Location.Code , y = data$Customer.Lifetime.Value , fill = Location.Code)) + 
+        geom_boxplot() + 
+        theme_igray() + 
+        labs(y = 'Customer Lifetime Value' , x = 'Location')
+```
+Suburban is more dispersed.
+
+```{r}
+ggplot(data , aes(x = data$Marital.Status , y = data$Customer.Lifetime.Value , fill = Marital.Status)) + 
+        geom_boxplot() + 
+        theme_igray() + 
+        labs(y = 'Customer Lifetime Value' , x = 'Marital Status')
+```
+Married is more dispersed.
+
+```{r}
+ggplot(data , aes(x = data$Sales.Channel , y = data$Customer.Lifetime.Value , fill = Sales.Channel)) + 
+        geom_boxplot() + 
+        theme_igray() + 
+        labs(y = 'Customer Lifetime Value' , x = 'Sales Channel')
+```
+Call Center is more dispersed.
+
+# Boxplot to check the distribution of Customer Lifetime Value with Policy Type.
+```{r}
+ggplot(data , aes(x = data$Policy.Type , y = data$Customer.Lifetime.Value , fill = Policy.Type)) + 
+        geom_boxplot() + 
+        theme_igray() + 
+        labs(y = 'Customer Lifetime Value' , x = 'Policy Type')
+```
+The above figure is a boxplot between Customer Lifetime Value and Policy type. The data for Personal Insurance is more dispersed than other two type of insurance with outliers for all type of insurance.
+
+# Boxplot to check the distribution of Customer Lifetime Value with Vehicle Class.
+```{r}
+ggplot(data , aes(x = data$Vehicle.Class , y = data$Customer.Lifetime.Value , fill = Vehicle.Class)) + 
+        geom_boxplot() + 
+        theme_igray() + 
+        labs(y = 'Customer Lifetime Value' , x = 'Vehicle Class')
+```
+The above figure gives a boxplot between CLV and Vehicle Class, it shows that in our data the CLV for Luxury car is more dispersed than other type Vehicle Class. There are outliers in all type of Vehicle Class.
+
+```{r}
+ggplot(data , aes(x = data$Vehicle.Size , y = data$Customer.Lifetime.Value , fill = Vehicle.Size)) + 
+        geom_boxplot() + 
+        theme_igray() + 
+        labs(y = 'Customer Lifetime Value' , x = 'Vehicle Size')
+```
+Medsize is more dispersed.
+
+# Identifying and correcting Collinearity
+```{r}
+#Dropping dependent variable for calculating Multicollinearity
+data_a = subset(data, select = -c(Customer.Lifetime.Value))
+
+#Identifying numeric variables
+numericData <- data_a[sapply(data_a, is.numeric)]
+
+#Calculating Correlation
+descrCor <- cor(numericData)
+
+# Print correlation matrix and look at max correlation
+print(descrCor)
+
+# Visualize Correlation Matrix
+corrplot(descrCor, order = "FPC", method = "color", type = "lower", tl.cex = 0.7, tl.col = rgb(0, 0, 0))
+```
+
+```{r}
+# Checking Variables that are highly correlated
+highlyCorrelated = findCorrelation(descrCor, cutoff=0.7)
+
+#Identifying Variable Names of Highly Correlated Variables
+highlyCorCol = colnames(numericData)[highlyCorrelated]
+
+#Print highly correlated attributes
+highlyCorCol
+```
+The values are less than the cutoff of 0.7, hence there is not collinearity among the dependent variables.
+
+# Converting the categorical variables to numeric.
+```{r}
+data$Coverage = as.factor(data$Coverage)
+data$Policy.Type = as.factor(data$Policy.Type)
+data$Vehicle.Class = as.factor(data$Vehicle.Class)
+data$Education = as.factor(data$Education)
+data$EmploymentStatus = as.factor(data$EmploymentStatus)
+data$Gender = as.factor(data$Gender)
+data$Location.Code = as.factor(data$Location.Code)
+data$Marital.Status = as.factor(data$Marital.Status)
+data$Sales.Channel = as.factor(data$Sales.Channel)
+data$Vehicle.Size = as.factor(data$Vehicle.Size)
+```
+
+# Building a Multiple Linear Regression Model
+```{r}
+attach(data)
+model_lm = lm(Customer.Lifetime.Value ~., data = data)
+#Check Model Performance
+summary(model_lm)
+
+#Extracting Coefficients
+summary(model_lm)$coeff
+anova(model_lm)
+
+par(mfrow=c(2,2))
+plot(model_lm)
+```
+Linear regression model tests the null hypothesis that the estimate is equal to zero. An independent variable that has a p-value less than 0.05 means we are rejecting the null hypothesis at 5% level of significance. It means the coefficient of that variable is not equal to 0. A large p-value implies variable is meaningless in order to predict target variable.
+
+```{r}
+summary(model_lm)$r.squared
+summary(model_lm)$adj.r.squared
+AIC(model_lm)
+BIC(model_lm)
+```
+Higher R-Squared and Adjusted R-Squared value, better the model. Whereas, lower the AIC and BIC score, better the model.
+
+Understanding AIC and BIC
+
+AIC and BIC are measures of goodness of fit. They penalize complex models. In other words, it penalize the higher number of estimated parameters. It believes in a concept that a model with fewer parameters is to be preferred to one with more. In general, BIC penalizes models more for free parameters than does AIC.  Both criteria depend on the maximized value of the likelihood function L for the estimated model.
+
+Variable Selection Methods
+
+There are three variable selection methods - Forward, Backward, Stepwise.
+1. Starts with a single variable, then adds variables one at a time based on AIC ('Forward')
+2. Starts with all variables, iteratively removing those of low importance based on AIC ('Backward')
+3. Run in both directions ('Stepwise')
+
+```{r}
+#Stepwise Selection based on AIC
+library(MASS)
+step_both <- stepAIC(model_lm, direction="both")
+summary(step_both)
+```
+
+```{r}
+
+#Backward Selection based on AIC
+step_bak <- stepAIC(model_lm, direction="backward")
+summary(step_bak)
+```
+
+```{r}
+#Forward Selection based on AIC
+step_fwd <- stepAIC(model_lm, direction="forward")
+summary(step_fwd)
+```
+
+```{r}
+#Stepwise Selection with BIC
+n = dim(data)[1]
+stepBIC = stepAIC(model_lm,k=log(n))
+summary(stepBIC)
+```
+
+Look at the estimates above after performing stepwise selection based on BIC. Variables have been reduced but Adjusted R-Squared remains same (very slightly improved). AIC and BIC scores also went down which indicates a better model.
+
+Calculate Standardized Coefficients
+
+Standardized Coefficients helps to rank predictors based on absolute value of standardized estimates. Higher the value, more important the variable.
+
+```{r}
+#Standardised coefficients
+library(QuantPsyc)
+lm.beta(stepBIC)
+```
+
+```{r}
+#R Function : Manual Calculation of Standardised coefficients
+stdz.coff <- function (regmodel)
+{ b <- summary(regmodel)$coef[-1,1]
+sx <- sapply(regmodel$model[-1], sd)
+sy <- sapply(regmodel$model[1], sd)
+beta <- b * sx / sy
+return(beta)
+}
+
+std.Coeff = data.frame(Standardized.Coeff = stdz.coff(stepBIC))
+std.Coeff = cbind(Variable = row.names(std.Coeff), std.Coeff)
+row.names(std.Coeff) = NULL
+std.Coeff
+```
+
+Calculating Variance Inflation Factor (VIF)
+
+Variance inflation factor measure how much the variance of the coefficients are inflated as compared to when independent variables are not highly non-correlated. It should be less than 5.
+
+```{r}
+library(car)
+vif(stepBIC)
+```
+
+Testing Other Assumptions
+
+Assumptions of Linear Regression Analysis 
+
+1. Linear Relationship : Linear regression needs a linear relationship between the dependent and independent variables.
+
+2. Normality of Residual : Linear regression requires residuals should be normally distributed.
+
+3. Homoscedasticity :  Linear regression assumes that residuals are approximately equal for all predicted dependent variable values. In other words, it means constant variance of errors.
+
+4. No Outlier Problem
+
+5. Multicollinearity : It means there is a high correlation between independent variables. The linear regression model MUST NOT be faced with problem of multicollinearity.
+
+6. Independence of error terms - No Autocorrelation
+
+
+```{r}
+#Autocorrelation Test
+durbinWatsonTest(stepBIC)
+```
+
+The Durbin-Watson statistic will always have a value between 0 and 4. A value of 2.0 means that there is no autocorrelation detected in the sample. Values from 0 to less than 2 indicate positive autocorrelation and values from from 2 to 4 indicate negative autocorrelation.
+
+```{r}
+
+#Normality Of Residuals (Should be > 0.05)
+res=residuals(stepBIC,type="pearson")
+ks.test(9134,res)
+```
+Since the p value is more than 0.05, the model passes the Normality test.
+```{r}
+#Testing for Homoscedasticity (Should be > 0.05)
+ncvTest(stepBIC)
+```
+Since the p value is less than 0.05, hence the model fails Homoscedasticity test
+```{r}
+#Outliers – Bonferroni test
+outlierTest(stepBIC)
+plot(stepBIC,5)
+```
+
+
+```{r}
+#Check Linearity
+plot(stepBIC,1)
+```
+
+Ideally, the residual plot will show no fitted pattern. That is, the red line should be approximately horizontal at zero. The presence of a pattern may indicate a problem with some aspect of the linear model.
+In our example, there is no pattern in the residual plot. This suggests that we can assume linear relationship between the predictors and the outcome variables.
+```{r}
+#Relative Importance
+#install.packages("relaimpo")
+library(relaimpo)
+calc.relimp(stepBIC)
+```
+https://advstats.psychstat.org/book/mregression/importance.php
+
+Since the above model fails outlier test and homoscedasticity test, we would built a Generalized Linear Model as the OLS assumptions are not very rigid for GLM Model.
+
+# Generalized Linear Model
+
+```{r}
+model_glm = glm(Customer.Lifetime.Value~Income+Monthly.Premium.Auto+Number.of.Open.Complaints, data = data, family = gaussian())
+summary(model_glm)
+```
+
+```{r}
+#Autocorrelation Test
+durbinWatsonTest(model_glm)
+```
+
+```{r}
+#Normality Of Residuals (Should be > 0.05)
+res=residuals(model_glm,type="pearson")
+ks.test(9134,res)
+```
+
+```{r}
+#Testing for Homoscedasticity (Should be > 0.05)
+bartlett.test(list(model_glm$residuals, model_glm$fitted.values))
+```
+
+```{r}
+#Outliers – Bonferonni test
+outlierTest(model_glm)
+plot(model_glm,5)
+```
+
+```{r}
+#Check Linearity
+plot(model_glm,1)
+```
+
+```{r}
+#Relative Importance
+#install.packages("relaimpo")
+library(relaimpo)
+calc.relimp(model_glm)
+```
+
+
+```{r}
+#Standardised coefficients
+library(QuantPsyc)
+lm.beta(model_glm)
+```
+
+```{r}
+library(car)
+vif(model_glm)
+```
+
+```{r}
+#See Predicted Value
+pred = predict(model_glm,data)
+#See Actual vs. Predicted Value
+finaldata = cbind(data,pred)
+print(head(subset(finaldata, select = c(Customer.Lifetime.Value,pred))))
+```
+
+
+```{r}
+#Calculating RMSE
+rmse = sqrt(mean((data$Customer.Lifetime.Value - pred)^2))
+print(rmse)
+```
+
+```{r}
+#Calculating Rsquared manually
+y = data[,c("Customer.Lifetime.Value")]
+R.squared = 1 - sum((y-pred)^2)/sum((y-mean(y))^2)
+print(R.squared)
+```
+
+```{r}
+#Calculating Adj. Rsquared manually
+n = dim(data)[1]
+p = dim(summary(model_glm)$coeff)[1] - 1
+adj.r.squared = 1 - (1 - R.squared) * ((n - 1)/(n-p-1))
+print(adj.r.squared)
+```
+
+```{r}
+#Box Cox Transformation
+library(lmSupport)
+modelBoxCox(model_glm)
+```
+
+K-fold cross-validation
+
+
+In the program below, we are performing 5-fold cross-validation. In 10-fold cross-validation, data is randomly split into 10 equal sized samples. Out of the 5 samples, a single sample which is random 20% of data is retained as validation data , and the remaining 80% is used as training data. This process is then repeated 10 times, with each of the 10 samples used exactly once as validation data. Later we average out the results.
+
+```{r}
+library(caret)
+
+# Define train control for k fold cross validation
+train_control <- trainControl(method="cv", number=10)
+# Fit Generalized Linear Model
+model_glm_cv <- train(Customer.Lifetime.Value~., data=data, trControl=train_control, method="glm")
+# Summarise Results
+print(model_glm_cv)
+```
+
+
+```{r}
+# Define train control for k fold cross validation
+train_control <- trainControl(method="cv", number=10)
+# Fit Generalized Linear Model
+model_lm_cv <- train(Customer.Lifetime.Value~., data=data, trControl=train_control, method="lm")
+# Summarise Results
+print(model_lm_cv)
+```
