@@ -6,7 +6,7 @@ output: html_document
 # Importing the dataset
 
 ```{r}
-data = read.csv('MCVA.csv')
+data = read.csv('/Users/paritoshkalla/desktop/FullTime/Credit Risk/lending-club-loan-data/MCVA.csv')
 ```
 
 # Importing the Libraries
@@ -152,7 +152,7 @@ highlyCorCol = colnames(numericData)[highlyCorrelated]
 #Print highly correlated attributes
 highlyCorCol
 ```
-The values are less than the cutoff of 0.7, hence there is not collinearity among the dependent variables.
+The values are less than the cutoff of 0.7, hence there is no collinearity among the dependent variables.
 
 # Converting the categorical variables to numeric.
 ```{r}
@@ -292,7 +292,6 @@ durbinWatsonTest(stepBIC)
 The Durbin-Watson statistic will always have a value between 0 and 4. A value of 2.0 means that there is no autocorrelation detected in the sample. Values from 0 to less than 2 indicate positive autocorrelation and values from from 2 to 4 indicate negative autocorrelation.
 
 ```{r}
-
 #Normality Of Residuals (Should be > 0.05)
 res=residuals(stepBIC,type="pearson")
 ks.test(9134,res)
@@ -321,7 +320,7 @@ In our example, there is no pattern in the residual plot. This suggests that we 
 #Relative Importance
 #install.packages("relaimpo")
 library(relaimpo)
-calc.relimp(stepBIC)
+calc.relimp(stepBIC, rela = TRUE) # rela = TRUE gives the percent importance
 ```
 https://advstats.psychstat.org/book/mregression/importance.php
 
@@ -418,8 +417,7 @@ modelBoxCox(model_glm)
 
 K-fold cross-validation
 
-
-In the program below, we are performing 5-fold cross-validation. In 10-fold cross-validation, data is randomly split into 10 equal sized samples. Out of the 5 samples, a single sample which is random 20% of data is retained as validation data , and the remaining 80% is used as training data. This process is then repeated 10 times, with each of the 10 samples used exactly once as validation data. Later we average out the results.
+In the program below, we are performing K-fold cross-validation. In 10-fold cross-validation, data is randomly split into 10 equal sized samples. Out of the 5 samples, a single sample which is random 20% of data is retained as validation data , and the remaining 80% is used as training data. This process is then repeated 10 times, with each of the 10 samples used exactly once as validation data. Later we average out the results.
 
 ```{r}
 library(caret)
